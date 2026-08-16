@@ -1,0 +1,6 @@
+bin/
+data/
+# SQLite database plus its WAL and shared-memory sidecar files.
+*.db
+*.db-shm
+*.db-wal

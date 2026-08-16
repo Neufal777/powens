@@ -1,0 +1,39 @@
+# `make up` starts the dispatcher plus a test receiver to watch deliveries land.
+# Both come from the same image, which contains both binaries.
+
+services:
+  dispatcher:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      DB_PATH: /app/data/webhooks.db
+      # Shared with the receiver so it can verify our signatures. In production
+      # this is per-destination and comes from a secret manager, never from a
+      # compose file in git.
+      WEBHOOK_SECRET: local-dev-secret
+      WORKERS: "8"
+      MAX_ATTEMPTS: "5"
+    volumes:
+      # Named volume, so accepted jobs survive a restart and you can prove it.
+      - data:/app/data
+    # docker stop sends SIGTERM, which starts the graceful shutdown. Workers
+    # finish their current delivery, bounded by the 10s delivery timeout, so the
+    # grace period must be comfortably larger than Docker's 10s default.
+    stop_grace_period: 30s
+    depends_on:
+      receiver: {condition: service_healthy}
+
+  receiver:
+    build: .
+    entrypoint: ["receiver"]
+    ports: ["9090:9090"]
+    environment:
+      WEBHOOK_SECRET: local-dev-secret
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  data:

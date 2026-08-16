@@ -1,0 +1,10 @@
+# Keep the build context small and, more importantly, never ship a local
+# database or a .git directory into the image.
+.git
+.gitignore
+bin/
+data/
+*.db
+*.db-shm
+*.db-wal
+README.md
